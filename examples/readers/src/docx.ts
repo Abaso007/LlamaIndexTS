@@ -1,5 +1,5 @@
+import { DocxReader } from "@llamaindex/readers/docx";
 import { VectorStoreIndex } from "llamaindex";
-import { DocxReader } from "llamaindex/readers/DocxReader";
 
 const FILE_PATH = "../data/stars.docx";
 const SAMPLE_QUERY = "Information about Zodiac";
@@ -20,4 +20,4 @@ async function main() {
   console.log(`Test query > ${SAMPLE_QUERY}:\n`, response.toString());
 }
 
-main();
+void main();

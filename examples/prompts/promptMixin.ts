@@ -1,22 +1,21 @@
 import {
   Document,
-  ResponseSynthesizer,
-  TreeSummarize,
+  getResponseSynthesizer,
+  PromptTemplate,
   TreeSummarizePrompt,
   VectorStoreIndex,
-  serviceContextFromDefaults,
 } from "llamaindex";
 
-const treeSummarizePrompt: TreeSummarizePrompt = ({ context, query }) => {
-  return `Context information from multiple sources is below.
+const treeSummarizePrompt: TreeSummarizePrompt = new PromptTemplate({
+  template: `Context information from multiple sources is below.
 ---------------------
-${context}
+{context}
 ---------------------
 Given the information from multiple sources and not prior knowledge.
 Answer the query in the style of a Shakespeare play"
-Query: ${query}
-Answer:`;
-};
+Query: {query}
+Answer:`,
+});
 
 async function main() {
   const documents = new Document({
@@ -27,11 +26,7 @@ async function main() {
 
   const query = "The quick brown fox jumps over the lazy dog";
 
-  const ctx = serviceContextFromDefaults({});
-
-  const responseSynthesizer = new ResponseSynthesizer({
-    responseBuilder: new TreeSummarize(ctx),
-  });
+  const responseSynthesizer = getResponseSynthesizer("tree_summarize");
 
   const queryEngine = index.asQueryEngine({
     responseSynthesizer,
@@ -48,4 +43,4 @@ async function main() {
   await queryEngine.query({ query });
 }
 
-main();
+void main();

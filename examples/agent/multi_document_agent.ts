@@ -6,17 +6,19 @@ import {
   OpenAI,
   OpenAIAgent,
   QueryEngineTool,
-  SimpleNodeParser,
+  SentenceSplitter,
+  Settings,
   SimpleToolNodeMapping,
   SummaryIndex,
   VectorStoreIndex,
-  serviceContextFromDefaults,
   storageContextFromDefaults,
 } from "llamaindex";
 
 import { extractWikipedia } from "./helpers/extractWikipedia";
 
 const wikiTitles = ["Brazil", "Canada"];
+
+Settings.llm = new OpenAI({ model: "gpt-4" });
 
 async function main() {
   await extractWikipedia(wikiTitles);
@@ -30,23 +32,20 @@ async function main() {
     countryDocs[title] = document;
   }
 
-  const llm = new OpenAI({
-    model: "gpt-4",
-  });
-
-  const serviceContext = serviceContextFromDefaults({ llm });
   const storageContext = await storageContextFromDefaults({
     persistDir: "./storage",
   });
 
   // TODO: fix any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const documentAgents: any = {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const queryEngines: any = {};
 
   for (const title of wikiTitles) {
     console.log(`Processing ${title}`);
 
-    const nodes = new SimpleNodeParser({
+    const nodes = new SentenceSplitter({
       chunkSize: 200,
       chunkOverlap: 20,
     }).getNodesFromDocuments([countryDocs[title]]);
@@ -54,13 +53,11 @@ async function main() {
     console.log(`Creating index for ${title}`);
 
     const vectorIndex = await VectorStoreIndex.init({
-      serviceContext: serviceContext,
       storageContext: storageContext,
       nodes,
     });
 
     const summaryIndex = await SummaryIndex.init({
-      serviceContext: serviceContext,
       nodes,
     });
 
@@ -90,8 +87,7 @@ async function main() {
 
     const agent = new OpenAIAgent({
       tools: queryEngineTools,
-      llm,
-      verbose: true,
+      llm: new OpenAI({ model: "gpt-4" }),
     });
 
     documentAgents[title] = agent;
@@ -126,16 +122,12 @@ async function main() {
     allTools,
     toolMapping,
     VectorStoreIndex,
-    {
-      serviceContext,
-    },
   );
 
   const topAgent = new OpenAIAgent({
     toolRetriever: await objectIndex.asRetriever({}),
-    llm,
-    verbose: true,
-    prefixMessages: [
+    llm: new OpenAI({ model: "gpt-4" }),
+    chatHistory: [
       {
         content:
           "You are an agent designed to answer queries about a set of given countries. Please always use the tools provided to answer a question. Do not rely on prior knowledge.",
@@ -153,4 +145,4 @@ async function main() {
   });
 }
 
-main();
+void main();

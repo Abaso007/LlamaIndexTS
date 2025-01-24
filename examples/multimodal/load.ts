@@ -1,12 +1,12 @@
-import {
-  ServiceContext,
-  serviceContextFromDefaults,
-  SimpleDirectoryReader,
-  storageContextFromDefaults,
-  VectorStoreIndex,
-} from "llamaindex";
-import * as path from "path";
+import { Settings, SimpleDirectoryReader, VectorStoreIndex } from "llamaindex";
+import path from "path";
+import { getStorageContext } from "./storage";
 
+// Update chunk size and overlap
+Settings.chunkSize = 512;
+Settings.chunkOverlap = 20;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getRuntime(func: any) {
   const start = Date.now();
   await func();
@@ -14,19 +14,15 @@ async function getRuntime(func: any) {
   return end - start;
 }
 
-async function generateDatasource(serviceContext: ServiceContext) {
+async function generateDatasource() {
   console.log(`Generating storage...`);
   // Split documents, create embeddings and store them in the storage context
   const ms = await getRuntime(async () => {
     const documents = await new SimpleDirectoryReader().loadData({
       directoryPath: path.join("multimodal", "data"),
     });
-    const storageContext = await storageContextFromDefaults({
-      persistDir: "storage",
-      storeImages: true,
-    });
+    const storageContext = await getStorageContext();
     await VectorStoreIndex.fromDocuments(documents, {
-      serviceContext,
       storageContext,
     });
   });
@@ -34,12 +30,7 @@ async function generateDatasource(serviceContext: ServiceContext) {
 }
 
 async function main() {
-  const serviceContext = serviceContextFromDefaults({
-    chunkSize: 512,
-    chunkOverlap: 20,
-  });
-
-  await generateDatasource(serviceContext);
+  await generateDatasource();
   console.log("Finished generating storage.");
 }
 

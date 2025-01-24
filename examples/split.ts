@@ -8,9 +8,9 @@ async function main() {
 
   const textSplitter = new SentenceSplitter();
 
-  const chunks = textSplitter.splitTextWithOverlaps(essay);
+  const chunks = textSplitter.splitText(essay);
 
   console.log(chunks);
 }
 
-main();
+void main();

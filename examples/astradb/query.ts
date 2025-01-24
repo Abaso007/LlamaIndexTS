@@ -1,7 +1,7 @@
 import {
   AstraDBVectorStore,
-  serviceContextFromDefaults,
   VectorStoreIndex,
+  serviceContextFromDefaults,
 } from "llamaindex";
 
 const collectionName = "movie_reviews";
@@ -28,4 +28,4 @@ async function main() {
   }
 }
 
-main();
+void main();

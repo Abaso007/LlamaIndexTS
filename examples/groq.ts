@@ -3,28 +3,29 @@ import fs from "node:fs/promises";
 import {
   Document,
   Groq,
+  HuggingFaceEmbedding,
+  Settings,
   VectorStoreIndex,
-  serviceContextFromDefaults,
 } from "llamaindex";
 
+// Update llm to use Groq
+Settings.llm = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
+});
+
+// Use HuggingFace for embeddings
+Settings.embedModel = new HuggingFaceEmbedding({
+  modelType: "Xenova/all-mpnet-base-v2",
+});
+
 async function main() {
-  // Create an instance of the LLM
-  const groq = new Groq({
-    apiKey: process.env.GROQ_API_KEY,
-  });
-
-  // Create a service context
-  const serviceContext = serviceContextFromDefaults({ llm: groq });
-
   // Load essay from abramov.txt in Node
   const path = "node_modules/llamaindex/examples/abramov.txt";
   const essay = await fs.readFile(path, "utf-8");
   const document = new Document({ text: essay, id_: "essay" });
 
   // Load and index documents
-  const index = await VectorStoreIndex.fromDocuments([document], {
-    serviceContext,
-  });
+  const index = await VectorStoreIndex.fromDocuments([document]);
 
   // get retriever
   const retriever = index.asRetriever();
@@ -45,4 +46,4 @@ async function main() {
   console.log(response.response);
 }
 
-await main();
+main().catch(console.error);
