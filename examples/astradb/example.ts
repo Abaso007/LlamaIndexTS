@@ -1,6 +1,7 @@
 import {
   AstraDBVectorStore,
   Document,
+  MetadataFilters,
   storageContextFromDefaults,
   VectorStoreIndex,
 } from "llamaindex";
@@ -34,17 +35,18 @@ async function main() {
     ];
 
     const astraVS = new AstraDBVectorStore();
-    await astraVS.create(collectionName, {
+    await astraVS.createAndConnect(collectionName, {
       vector: { dimension: 1536, metric: "cosine" },
     });
-    await astraVS.connect(collectionName);
 
     const ctx = await storageContextFromDefaults({ vectorStore: astraVS });
     const index = await VectorStoreIndex.fromDocuments(docs, {
       storageContext: ctx,
     });
-
-    const queryEngine = index.asQueryEngine();
+    const preFilters: MetadataFilters = {
+      filters: [{ key: "id", operator: "in", value: [123, 789] }],
+    }; // try changing the filters to see the different results
+    const queryEngine = index.asQueryEngine({ preFilters });
     const response = await queryEngine.query({
       query: "Describe AstraDB.",
     });
@@ -55,4 +57,4 @@ async function main() {
   }
 }
 
-main();
+void main();

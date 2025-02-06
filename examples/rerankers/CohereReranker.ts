@@ -2,26 +2,22 @@ import {
   CohereRerank,
   Document,
   OpenAI,
+  Settings,
   VectorStoreIndex,
-  serviceContextFromDefaults,
 } from "llamaindex";
 
 import essay from "../essay";
 
+Settings.llm = new OpenAI({ model: "gpt-3.5-turbo", temperature: 0.1 });
+
 async function main() {
   const document = new Document({ text: essay, id_: "essay" });
 
-  const serviceContext = serviceContextFromDefaults({
-    llm: new OpenAI({ model: "gpt-3.5-turbo", temperature: 0.1 }),
+  const index = await VectorStoreIndex.fromDocuments([document]);
+
+  const retriever = index.asRetriever({
+    similarityTopK: 5,
   });
-
-  const index = await VectorStoreIndex.fromDocuments([document], {
-    serviceContext,
-  });
-
-  const retriever = index.asRetriever();
-
-  retriever.similarityTopK = 5;
 
   const nodePostprocessor = new CohereRerank({
     apiKey: "<COHERE_API_KEY>",
@@ -37,19 +33,19 @@ async function main() {
     retriever,
   });
 
-  const response = await queryEngine.query({
+  const { message } = await queryEngine.query({
     query: "What did the author do growing up?",
   });
 
   // cohere response
-  console.log(response.response);
+  console.log(message.content);
 
-  const baseResponse = await baseQueryEngine.query({
+  const { message: baseMessage } = await baseQueryEngine.query({
     query: "What did the author do growing up?",
   });
 
   // response without cohere
-  console.log(baseResponse.response);
+  console.log(baseMessage.content);
 }
 
 main().catch(console.error);

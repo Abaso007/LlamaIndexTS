@@ -1,58 +1,45 @@
+import { extractText } from "@llamaindex/core/utils";
 import {
-  CallbackManager,
-  ImageDocument,
-  ImageType,
-  MultiModalResponseSynthesizer,
-  NodeWithScore,
+  getResponseSynthesizer,
   OpenAI,
-  ServiceContext,
+  Settings,
   VectorStoreIndex,
-  serviceContextFromDefaults,
-  storageContextFromDefaults,
 } from "llamaindex";
+import { getStorageContext } from "./storage";
 
-export async function createIndex(serviceContext: ServiceContext) {
-  // set up vector store index with two vector stores, one for text, the other for images
-  const storageContext = await storageContextFromDefaults({
-    persistDir: "storage",
-    storeImages: true,
-  });
-  return await VectorStoreIndex.init({
-    nodes: [],
-    storageContext,
-    serviceContext,
-  });
-}
+// Update chunk size and overlap
+Settings.chunkSize = 512;
+Settings.chunkOverlap = 20;
+
+// Update llm
+Settings.llm = new OpenAI({ model: "gpt-4-turbo", maxTokens: 512 });
+
+// Update callbackManager
+Settings.callbackManager.on("retrieve-end", (event) => {
+  const { nodes, query } = event.detail;
+  const text = extractText(query);
+  console.log(`Retrieved ${nodes.length} nodes for query: ${text}`);
+});
 
 async function main() {
-  let images: ImageType[] = [];
-  const callbackManager = new CallbackManager({
-    onRetrieve: ({ query, nodes }) => {
-      images = nodes
-        .filter(({ node }: NodeWithScore) => node instanceof ImageDocument)
-        .map(({ node }: NodeWithScore) => (node as ImageDocument).image);
-    },
+  const storageContext = await getStorageContext();
+  const index = await VectorStoreIndex.init({
+    nodes: [],
+    storageContext,
   });
-  const llm = new OpenAI({ model: "gpt-4-vision-preview", maxTokens: 512 });
-  const serviceContext = serviceContextFromDefaults({
-    llm,
-    chunkSize: 512,
-    chunkOverlap: 20,
-    callbackManager,
-  });
-  const index = await createIndex(serviceContext);
 
   const queryEngine = index.asQueryEngine({
-    responseSynthesizer: new MultiModalResponseSynthesizer({ serviceContext }),
-    retriever: index.asRetriever({ similarityTopK: 3, imageSimilarityTopK: 1 }),
+    responseSynthesizer: getResponseSynthesizer("multi_modal"),
+    retriever: index.asRetriever({ topK: { TEXT: 3, IMAGE: 1 } }),
   });
-  const result = await queryEngine.query({
+  const stream = await queryEngine.query({
     query: "Tell me more about Vincent van Gogh's famous paintings",
+    stream: true,
   });
-  console.log(result.response, "\n");
-  images.forEach((image) =>
-    console.log(`Image retrieved and used in inference: ${image.toString()}`),
-  );
+  for await (const chunk of stream) {
+    process.stdout.write(chunk.response);
+  }
+  process.stdout.write("\n");
 }
 
 main().catch(console.error);

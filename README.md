@@ -1,13 +1,17 @@
-# LlamaIndex.TS
+<p align="center">
+  <img height="100" width="100" alt="LlamaIndex logo" src="https://ts.llamaindex.ai/square.svg" />
+</p>
+<h1 align="center">LlamaIndex.TS</h1>
+<h3 align="center">
+  Data framework for your LLM application.
+</h3>
 
 [![NPM Version](https://img.shields.io/npm/v/llamaindex)](https://www.npmjs.com/package/llamaindex)
 [![NPM License](https://img.shields.io/npm/l/llamaindex)](https://www.npmjs.com/package/llamaindex)
 [![NPM Downloads](https://img.shields.io/npm/dm/llamaindex)](https://www.npmjs.com/package/llamaindex)
 [![Discord](https://img.shields.io/discord/1059199217496772688)](https://discord.com/invite/eN6D2HQ4aX)
 
-LlamaIndex is a data framework for your LLM application.
-
-Use your own data with large language models (LLMs, OpenAI ChatGPT and others) in Typescript and Javascript.
+Use your own data with large language models (LLMs, OpenAI ChatGPT and others) in JS runtime environments with TypeScript support.
 
 Documentation: https://ts.llamaindex.ai/
 
@@ -19,59 +23,85 @@ Try examples online:
 
 LlamaIndex.TS aims to be a lightweight, easy to use set of libraries to help you integrate large language models into your applications with your own data.
 
-## Getting started with an example:
+## Compatibility
 
-LlamaIndex.TS requires Node v18 or higher. You can download it from https://nodejs.org or use https://nvm.sh (our preferred option).
+### Multiple JS Environment Support
 
-In a new folder:
+LlamaIndex.TS supports multiple JS environments, including:
 
-```bash
-export OPENAI_API_KEY="sk-......" # Replace with your key from https://platform.openai.com/account/api-keys
-pnpm init
-pnpm install typescript
-pnpm exec tsc --init # if needed
+- Node.js >= 20 ✅
+- Deno ✅
+- Bun ✅
+- Nitro ✅
+- Vercel Edge Runtime ✅ (with some limitations)
+- Cloudflare Workers ✅ (with some limitations)
+
+For now, browser support is limited due to the lack of support for [AsyncLocalStorage-like APIs](https://github.com/tc39/proposal-async-context)
+
+### Supported LLMs:
+
+- OpenAI LLms
+- Anthropic LLms
+- Groq LLMs
+- Llama2, Llama3, Llama3.1 LLMs
+- MistralAI LLMs
+- Fireworks LLMs
+- DeepSeek LLMs
+- ReplicateAI LLMs
+- TogetherAI LLMs
+- HuggingFace LLms
+- DeepInfra LLMs
+- Gemini LLMs
+
+## Getting started
+
+```shell
+npm install llamaindex
 pnpm install llamaindex
-pnpm install @types/node
+yarn add llamaindex
 ```
 
-Create the file example.ts
+### Setup in Node.js, Deno, Bun, TypeScript...?
 
-```ts
-// example.ts
-import fs from "fs/promises";
-import { Document, VectorStoreIndex } from "llamaindex";
+See our official document: <https://ts.llamaindex.ai/docs/llamaindex/getting_started/>
 
-async function main() {
-  // Load essay from abramov.txt in Node
-  const essay = await fs.readFile(
-    "node_modules/llamaindex/examples/abramov.txt",
-    "utf-8",
-  );
+### Tips when using in non-Node.js environments
 
-  // Create Document object with essay
-  const document = new Document({ text: essay });
+When you are importing `llamaindex` in a non-Node.js environment(such as Vercel Edge, Cloudflare Workers, etc.)
+Some classes are not exported from top-level entry file.
 
-  // Split text and create embeddings. Store them in a VectorStoreIndex
-  const index = await VectorStoreIndex.fromDocuments([document]);
+The reason is that some classes are only compatible with Node.js runtime,(e.g. `PDFReader`) which uses Node.js specific APIs(like `fs`, `child_process`, `crypto`).
 
-  // Query the index
-  const queryEngine = index.asQueryEngine();
-  const response = await queryEngine.query({
-    query: "What did the author do in college?",
+If you need any of those classes, you have to import them instead directly though their file path in the package.
+Here's an example for importing the `PineconeVectorStore` class:
+
+```typescript
+import { PineconeVectorStore } from "llamaindex/vector-store/PineconeVectorStore";
+```
+
+As the `PDFReader` is not working with the Edge runtime, here's how to use the `SimpleDirectoryReader` with the `LlamaParseReader` to load PDFs:
+
+```typescript
+import { SimpleDirectoryReader } from "llamaindex/readers/SimpleDirectoryReader";
+import { LlamaParseReader } from "llamaindex/readers/LlamaParseReader";
+
+export const DATA_DIR = "./data";
+
+export async function getDocuments() {
+  const reader = new SimpleDirectoryReader();
+  // Load PDFs using LlamaParseReader
+  return await reader.loadData({
+    directoryPath: DATA_DIR,
+    fileExtToReader: {
+      pdf: new LlamaParseReader({ resultType: "markdown" }),
+    },
   });
-
-  // Output response
-  console.log(response.toString());
 }
-
-main();
 ```
 
-Then you can run it using
+> _Note_: Reader classes have to be added explictly to the `fileExtToReader` map in the Edge version of the `SimpleDirectoryReader`.
 
-```bash
-pnpm dlx ts-node example.ts
-```
+You'll find a complete example with LlamaIndexTS here: https://github.com/run-llama/create_llama_projects/tree/main/nextjs-edge-llamaparse
 
 ## Playground
 
@@ -79,61 +109,25 @@ Check out our NextJS playground at https://llama-playground.vercel.app/. The sou
 
 ## Core concepts for getting started:
 
-- [Document](/packages/core/src/Node.ts): A document represents a text file, PDF file or other contiguous piece of data.
+- [Document](/packages/llamaindex/src/Node.ts): A document represents a text file, PDF file or other contiguous piece of data.
 
-- [Node](/packages/core/src/Node.ts): The basic data building block. Most commonly, these are parts of the document split into manageable pieces that are small enough to be fed into an embedding model and LLM.
+- [Node](/packages/llamaindex/src/Node.ts): The basic data building block. Most commonly, these are parts of the document split into manageable pieces that are small enough to be fed into an embedding model and LLM.
 
-- [Embedding](/packages/core/src/Embedding.ts): Embeddings are sets of floating point numbers which represent the data in a Node. By comparing the similarity of embeddings, we can derive an understanding of the similarity of two pieces of data. One use case is to compare the embedding of a question with the embeddings of our Nodes to see which Nodes may contain the data needed to answer that quesiton.
+- [Embedding](/packages/llamaindex/src/embeddings/OpenAIEmbedding.ts): Embeddings are sets of floating point numbers which represent the data in a Node. By comparing the similarity of embeddings, we can derive an understanding of the similarity of two pieces of data. One use case is to compare the embedding of a question with the embeddings of our Nodes to see which Nodes may contain the data needed to answer that question. Because the default service context is OpenAI, the default embedding is `OpenAIEmbedding`. If using different models, say through Ollama, use this [Embedding](/packages/llamaindex/src/embeddings/OllamaEmbedding.ts) (see all [here](/packages/llamaindex/src/embeddings)).
 
-- [Indices](/packages/core/src/indices/): Indices store the Nodes and the embeddings of those nodes. QueryEngines retrieve Nodes from these Indices using embedding similarity.
+- [Indices](/packages/llamaindex/src/indices/): Indices store the Nodes and the embeddings of those nodes. QueryEngines retrieve Nodes from these Indices using embedding similarity.
 
-- [QueryEngine](/packages/core/src/QueryEngine.ts): Query engines are what generate the query you put in and give you back the result. Query engines generally combine a pre-built prompt with selected Nodes from your Index to give the LLM the context it needs to answer your query.
+- [QueryEngine](/packages/llamaindex/src/engines/query/RetrieverQueryEngine.ts): Query engines are what generate the query you put in and give you back the result. Query engines generally combine a pre-built prompt with selected Nodes from your Index to give the LLM the context it needs to answer your query. To build a query engine from your Index (recommended), use the [`asQueryEngine`](/packages/llamaindex/src/indices/BaseIndex.ts) method on your Index. See all query engines [here](/packages/llamaindex/src/engines/query).
 
-- [ChatEngine](/packages/core/src/ChatEngine.ts): A ChatEngine helps you build a chatbot that will interact with your Indices.
+- [ChatEngine](/packages/llamaindex/src/engines/chat/SimpleChatEngine.ts): A ChatEngine helps you build a chatbot that will interact with your Indices. See all chat engines [here](/packages/llamaindex/src/engines/chat).
 
-- [SimplePrompt](/packages/core/src/Prompt.ts): A simple standardized function call definition that takes in inputs and formats them in a template literal. SimplePrompts can be specialized using currying and combined using other SimplePrompt functions.
-
-## Note: NextJS:
-
-If you're using NextJS App Router, you'll need to use the NodeJS runtime (default) and add the following config to your next.config.js to have it use imports/exports in the same way Node does.
-
-```js
-export const runtime = "nodejs"; // default
-```
-
-```js
-// next.config.js
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  experimental: {
-    serverComponentsExternalPackages: ["pdf2json"],
-  },
-  webpack: (config) => {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      sharp$: false,
-      "onnxruntime-node$": false,
-    };
-    return config;
-  },
-};
-
-module.exports = nextConfig;
-```
-
-## Supported LLMs:
-
-- OpenAI GPT-3.5-turbo and GPT-4
-- Anthropic Claude Instant and Claude 2
-- Groq LLMs
-- Llama2 Chat LLMs (70B, 13B, and 7B parameters)
-- MistralAI Chat LLMs
-- Fireworks Chat LLMs
+- [SimplePrompt](/packages/llamaindex/src/Prompt.ts): A simple standardized function call definition that takes in inputs and formats them in a template literal. SimplePrompts can be specialized using currying and combined using other SimplePrompt functions.
 
 ## Contributing:
 
-We are in the very early days of LlamaIndex.TS. If you’re interested in hacking on it with us check out our [contributing guide](/CONTRIBUTING.md)
+Please see our [contributing guide](CONTRIBUTING.md) for more information.
+You are highly encouraged to contribute to LlamaIndex.TS!
 
-## Bugs? Questions?
+## Community
 
 Please join our Discord! https://discord.com/invite/eN6D2HQ4aX

@@ -1,10 +1,7 @@
-import {
-  PineconeVectorStore,
-  VectorStoreIndex,
-  serviceContextFromDefaults,
-} from "llamaindex";
+import { PineconeVectorStore, VectorStoreIndex } from "llamaindex";
 
 async function main() {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const readline = require("readline").createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -13,8 +10,7 @@ async function main() {
   try {
     const pcvs = new PineconeVectorStore();
 
-    const ctx = serviceContextFromDefaults();
-    const index = await VectorStoreIndex.fromVectorStore(pcvs, ctx);
+    const index = await VectorStoreIndex.fromVectorStore(pcvs);
 
     // Query the index
     const queryEngine = await index.asQueryEngine();
@@ -49,6 +45,7 @@ function isQuit(question: string) {
 }
 
 // Function to get user input as a promise
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getUserInput(readline: any): Promise<string> {
   return new Promise((resolve) => {
     readline.question(

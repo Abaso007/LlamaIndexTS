@@ -33,14 +33,14 @@ async function main() {
   });
 
   // Chat with the agent
-  const response = await agent.chat({
-    message: "What was his salary?",
+  const { message } = await agent.chat({
+    message: "What was his first salary?",
   });
 
   // Print the response
-  console.log(String(response));
+  console.log(message.content);
 }
 
-main().then(() => {
+void main().then(() => {
   console.log("Done");
 });
