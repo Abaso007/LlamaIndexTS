@@ -1,5 +1,12 @@
 # @llamaindex/bm25-retriever
 
+## 0.0.4
+
+### Patch Changes
+
+- Updated dependencies [5da5b3c]
+  - @llamaindex/core@0.6.15
+
 ## 0.0.3
 
 ### Patch Changes
