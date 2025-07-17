@@ -1,5 +1,11 @@
 # @llamaindex/core
 
+## 0.6.15
+
+### Patch Changes
+
+- 5da5b3c: add progress callback to embeddings
+
 ## 0.6.14
 
 ### Patch Changes
